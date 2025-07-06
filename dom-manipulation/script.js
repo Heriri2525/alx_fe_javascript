@@ -1,5 +1,5 @@
-// Initial list of quotes
-const quotes = [
+// Quotes array
+let quotes = [
   { text: "The best way to get started is to quit talking and begin doing.", category: "Motivation" },
   { text: "Success is not in what you have, but who you are.", category: "Inspiration" },
   { text: "In the middle of difficulty lies opportunity.", category: "Wisdom" }
@@ -8,6 +8,7 @@ const quotes = [
 // Get DOM elements
 const quoteDisplay = document.getElementById("quoteDisplay");
 const newQuoteBtn = document.getElementById("newQuote");
+const addQuoteBtn = document.getElementById("addQuoteBtn");
 
 // ✅ Required function: displayRandomQuote
 function displayRandomQuote() {
@@ -22,28 +23,32 @@ function displayRandomQuote() {
 
 // ✅ Required function: addQuote
 function addQuote() {
-  const textInput = document.getElementById("newQuoteText");
-  const categoryInput = document.getElementById("newQuoteCategory");
+  const quoteTextInput = document.getElementById("newQuoteText");
+  const quoteCategoryInput = document.getElementById("newQuoteCategory");
 
-  const text = textInput.value.trim();
-  const category = categoryInput.value.trim();
+  const quoteText = quoteTextInput.value.trim();
+  const quoteCategory = quoteCategoryInput.value.trim();
 
-  if (text && category) {
-    // Add new quote to array
-    quotes.push({ text, category });
+  if (quoteText && quoteCategory) {
+    const newQuote = {
+      text: quoteText,
+      category: quoteCategory
+    };
 
-    // Optionally display the newly added quote
+    // Add new quote to the array
+    quotes.push(newQuote);
+
+    // Update the display to show the new quote
     displayRandomQuote();
 
-    // Clear the input fields
-    textInput.value = "";
-    categoryInput.value = "";
-
-    alert("New quote added successfully!");
+    // Clear input fields
+    quoteTextInput.value = "";
+    quoteCategoryInput.value = "";
   } else {
-    alert("Please enter both quote text and category.");
+    alert("Please fill in both quote text and category.");
   }
 }
 
-// ✅ Event listener for button
+// ✅ Add event listeners
 newQuoteBtn.addEventListener("click", displayRandomQuote);
+addQuoteBtn.addEventListener("click", addQuote);
