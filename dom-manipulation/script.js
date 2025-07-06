@@ -1,5 +1,4 @@
-// Your actual CrudCrud API endpoint:
-const SERVER_URL = "https://crudcrud.com/api/587804a741324e5b8b140357748121c9/quotes";
+const SERVER_URL = "https://jsonplaceholder.typicode.com/posts";
 
 let quotes = JSON.parse(localStorage.getItem("quotes")) || [];
 
@@ -7,15 +6,14 @@ const quoteDisplay = document.getElementById("quoteDisplay");
 const newQuoteBtn = document.getElementById("newQuote");
 const addQuoteBtn = document.getElementById("addQuoteBtn");
 const categoryFilter = document.getElementById("categoryFilter");
-const importFileInput = document.getElementById("importFile");
-const exportBtn = document.getElementById("exportBtn");
-const syncBtn = document.getElementById("syncBtn");
 const syncStatus = document.getElementById("syncStatus");
 
+// Save to localStorage
 function saveQuotes() {
   localStorage.setItem("quotes", JSON.stringify(quotes));
 }
 
+// Populate categories dropdown dynamically
 function populateCategories() {
   const categories = [...new Set(quotes.map(q => q.category))];
   categoryFilter.innerHTML = `<option value="all">All Categories</option>`;
@@ -30,6 +28,7 @@ function populateCategories() {
   if (savedFilter) categoryFilter.value = savedFilter;
 }
 
+// Show a random quote filtered by category
 function filterQuotes() {
   const selected = categoryFilter.value;
   localStorage.setItem("selectedCategory", selected);
@@ -49,21 +48,30 @@ function filterQuotes() {
   }
 }
 
+// Fetch quotes from server (GET)
 async function fetchQuotesFromServer() {
   const response = await fetch(SERVER_URL);
   if (!response.ok) throw new Error("Failed to fetch from server");
-  return await response.json();
+  const data = await response.json();
+  // Map jsonplaceholder data to our quote format: use 'title' as text, 'userId' as category (string)
+  return data.map(item => ({
+    text: item.title,
+    category: String(item.userId)
+  }));
 }
 
+// Post new quote to server (POST)
 async function postQuoteToServer(quote) {
   const response = await fetch(SERVER_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(quote),
+    body: JSON.stringify({ title: quote.text, userId: quote.category })
   });
   if (!response.ok) throw new Error("Failed to post quote to server");
+  return await response.json();
 }
 
+// Sync local quotes with server data and resolve conflicts
 async function syncQuotes() {
   syncStatus.style.color = "green";
   syncStatus.textContent = "Syncing with server...";
@@ -91,7 +99,7 @@ async function syncQuotes() {
         try {
           await postQuoteToServer(localQuote);
         } catch {
-          // ignore errors here
+          // Ignore errors here
         }
       }
     }
@@ -138,59 +146,15 @@ function addQuote() {
   }
 }
 
-function exportToJsonFile() {
-  const dataStr = JSON.stringify(quotes, null, 2);
-  const blob = new Blob([dataStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "quotes.json";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function importFromJsonFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    try {
-      const imported = JSON.parse(e.target.result);
-      if (Array.isArray(imported)) {
-        imported.forEach(async q => {
-          quotes.push(q);
-          try {
-            await postQuoteToServer(q);
-          } catch {
-            // Ignore errors here
-          }
-        });
-        saveQuotes();
-        populateCategories();
-        filterQuotes();
-        alert("Quotes imported and synced.");
-      } else {
-        alert("Invalid JSON file.");
-      }
-    } catch {
-      alert("Error reading file.");
-    }
-  };
-  reader.readAsText(file);
-}
+// Event listeners
+newQuoteBtn.addEventListener("click", filterQuotes);
+addQuoteBtn.addEventListener("click", addQuote);
+categoryFilter.addEventListener("change", filterQuotes);
 
 // Periodic sync every 30 seconds
 setInterval(syncQuotes, 30000);
 
-// Event listeners
-newQuoteBtn.addEventListener("click", filterQuotes);
-addQuoteBtn.addEventListener("click", addQuote);
-exportBtn.addEventListener("click", exportToJsonFile);
-importFileInput.addEventListener("change", importFromJsonFile);
-syncBtn.addEventListener("click", syncQuotes);
-
-// On load
+// Initial setup on load
 window.onload = async function () {
   const last = sessionStorage.getItem("lastQuote");
   if (last) {
