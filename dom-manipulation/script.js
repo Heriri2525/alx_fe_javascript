@@ -1,17 +1,8 @@
-// Load quotes from localStorage or use default list
-let quotes = JSON.parse(localStorage.getItem("quotes")) || [
-  { text: "The best way to get started is to quit talking and begin doing.", category: "Motivation" },
-  { text: "Success is not in what you have, but who you are.", category: "Inspiration" },
-  { text: "In the middle of difficulty lies opportunity.", category: "Wisdom" }
-];
+// Replace this URL with your actual CrudCrud API endpoint (get from https://crudcrud.com)
+const SERVER_URL = "https://crudcrud.com/api/YOUR_API_KEY_HERE/quotes";
 
-// Simulated "server" quotes
-let serverQuotes = [
-  { text: "Learning never exhausts the mind.", category: "Wisdom" },
-  { text: "The purpose of our lives is to be happy.", category: "Inspiration" }
-];
+let quotes = JSON.parse(localStorage.getItem("quotes")) || [];
 
-// DOM Elements
 const quoteDisplay = document.getElementById("quoteDisplay");
 const newQuoteBtn = document.getElementById("newQuote");
 const addQuoteBtn = document.getElementById("addQuoteBtn");
@@ -21,12 +12,10 @@ const exportBtn = document.getElementById("exportBtn");
 const syncBtn = document.getElementById("syncBtn");
 const syncStatus = document.getElementById("syncStatus");
 
-// Save to localStorage
 function saveQuotes() {
   localStorage.setItem("quotes", JSON.stringify(quotes));
 }
 
-// ✅ Populate category dropdown
 function populateCategories() {
   const categories = [...new Set(quotes.map(q => q.category))];
   categoryFilter.innerHTML = `<option value="all">All Categories</option>`;
@@ -41,7 +30,6 @@ function populateCategories() {
   if (savedFilter) categoryFilter.value = savedFilter;
 }
 
-// ✅ Filter quotes based on category
 function filterQuotes() {
   const selected = categoryFilter.value;
   localStorage.setItem("selectedCategory", selected);
@@ -61,7 +49,61 @@ function filterQuotes() {
   }
 }
 
-// ✅ Add new quote
+async function fetchQuotesFromServer() {
+  const response = await fetch(SERVER_URL);
+  if (!response.ok) throw new Error("Network response was not ok");
+  const serverQuotes = await response.json();
+  return serverQuotes;
+}
+
+async function postQuoteToServer(quote) {
+  const response = await fetch(SERVER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(quote),
+  });
+  if (!response.ok) throw new Error("Failed to post quote");
+}
+
+async function syncQuotes() {
+  syncStatus.style.color = "green";
+  syncStatus.textContent = "Syncing with server...";
+  try {
+    const serverQuotes = await fetchQuotesFromServer();
+
+    let isChanged = false;
+
+    // Add new quotes from server that don't exist locally
+    serverQuotes.forEach(serverQuote => {
+      const exists = quotes.some(localQuote =>
+        localQuote.text === serverQuote.text &&
+        localQuote.category === serverQuote.category
+      );
+      if (!exists) {
+        quotes.push(serverQuote);
+        isChanged = true;
+      }
+    });
+
+    if (isChanged) {
+      saveQuotes();
+      populateCategories();
+      filterQuotes();
+      syncStatus.textContent = "Synced! Local quotes updated with server data.";
+    } else {
+      syncStatus.textContent = "Already up to date with server.";
+    }
+  } catch (err) {
+    syncStatus.style.color = "red";
+    syncStatus.textContent = "Sync failed. Check your internet connection.";
+  }
+
+  setTimeout(() => {
+    syncStatus.textContent = "";
+    syncStatus.style.color = "green";
+  }, 4000);
+}
+
 function addQuote() {
   const textInput = document.getElementById("newQuoteText");
   const categoryInput = document.getElementById("newQuoteCategory");
@@ -75,15 +117,16 @@ function addQuote() {
     saveQuotes();
     populateCategories();
     filterQuotes();
+    postQuoteToServer(newQuote)
+      .then(() => alert("Quote added and synced!"))
+      .catch(() => alert("Quote added locally but failed to sync."));
     textInput.value = "";
     categoryInput.value = "";
-    alert("Quote added!");
   } else {
     alert("Please fill in both fields.");
   }
 }
 
-// ✅ Export to JSON
 function exportToJsonFile() {
   const dataStr = JSON.stringify(quotes, null, 2);
   const blob = new Blob([dataStr], { type: "application/json" });
@@ -95,21 +138,27 @@ function exportToJsonFile() {
   URL.revokeObjectURL(url);
 }
 
-// ✅ Import from JSON file
 function importFromJsonFile(event) {
   const file = event.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     try {
       const imported = JSON.parse(e.target.result);
       if (Array.isArray(imported)) {
-        quotes.push(...imported);
+        imported.forEach(async (q) => {
+          quotes.push(q);
+          try {
+            await postQuoteToServer(q);
+          } catch {
+            // ignore post failure here
+          }
+        });
         saveQuotes();
         populateCategories();
         filterQuotes();
-        alert("Quotes imported successfully!");
+        alert("Quotes imported and synced.");
       } else {
         alert("Invalid JSON file.");
       }
@@ -120,60 +169,18 @@ function importFromJsonFile(event) {
   reader.readAsText(file);
 }
 
-// ✅ Simulate fetching quotes from "server"
-function fetchFromServer() {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(serverQuotes);
-    }, 1000); // simulate delay
-  });
-}
+// Periodic sync every 30 seconds
+setInterval(syncQuotes, 30000);
 
-// ✅ Sync with server
-async function syncWithServer() {
-  syncStatus.textContent = "Syncing with server...";
-  try {
-    const serverData = await fetchFromServer();
-
-    const localData = JSON.stringify(quotes);
-    const remoteData = JSON.stringify(serverData);
-
-    if (localData !== remoteData) {
-      quotes = serverData; // server wins
-      saveQuotes();
-      populateCategories();
-      filterQuotes();
-      syncStatus.textContent = "Quotes synced with server. Local data updated.";
-    } else {
-      syncStatus.textContent = "Already up to date with server.";
-    }
-  } catch (err) {
-    syncStatus.style.color = "red";
-    syncStatus.textContent = "Sync failed.";
-  }
-
-  setTimeout(() => {
-    syncStatus.textContent = "";
-    syncStatus.style.color = "green";
-  }, 4000);
-}
-
-// ✅ Auto sync every 30 seconds
-setInterval(() => {
-  syncWithServer();
-}, 30000);
-
-// ✅ Event Listeners
+// Event listeners
 newQuoteBtn.addEventListener("click", filterQuotes);
 addQuoteBtn.addEventListener("click", addQuote);
 exportBtn.addEventListener("click", exportToJsonFile);
 importFileInput.addEventListener("change", importFromJsonFile);
-syncBtn.addEventListener("click", syncWithServer);
+syncBtn.addEventListener("click", syncQuotes);
 
-// ✅ On load
-window.onload = function() {
-  populateCategories();
-
+// On load
+window.onload = async function () {
   const last = sessionStorage.getItem("lastQuote");
   if (last) {
     const quote = JSON.parse(last);
@@ -181,4 +188,7 @@ window.onload = function() {
   } else {
     filterQuotes();
   }
+
+  populateCategories();
+  await syncQuotes();
 };
