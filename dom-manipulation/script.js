@@ -1,5 +1,5 @@
-// Replace this URL with your actual CrudCrud API endpoint (get from https://crudcrud.com)
-const SERVER_URL = "https://crudcrud.com/api/YOUR_API_KEY_HERE/quotes";
+// Your actual CrudCrud API endpoint:
+const SERVER_URL = "https://crudcrud.com/api/587804a741324e5b8b140357748121c9/quotes";
 
 let quotes = JSON.parse(localStorage.getItem("quotes")) || [];
 
@@ -51,9 +51,8 @@ function filterQuotes() {
 
 async function fetchQuotesFromServer() {
   const response = await fetch(SERVER_URL);
-  if (!response.ok) throw new Error("Network response was not ok");
-  const serverQuotes = await response.json();
-  return serverQuotes;
+  if (!response.ok) throw new Error("Failed to fetch from server");
+  return await response.json();
 }
 
 async function postQuoteToServer(quote) {
@@ -62,7 +61,7 @@ async function postQuoteToServer(quote) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(quote),
   });
-  if (!response.ok) throw new Error("Failed to post quote");
+  if (!response.ok) throw new Error("Failed to post quote to server");
 }
 
 async function syncQuotes() {
@@ -71,31 +70,43 @@ async function syncQuotes() {
   try {
     const serverQuotes = await fetchQuotesFromServer();
 
-    let isChanged = false;
-
-    // Add new quotes from server that don't exist locally
-    serverQuotes.forEach(serverQuote => {
-      const exists = quotes.some(localQuote =>
-        localQuote.text === serverQuote.text &&
-        localQuote.category === serverQuote.category
+    // Add quotes from server not in local
+    let newQuotesAdded = false;
+    serverQuotes.forEach(sq => {
+      const exists = quotes.some(lq =>
+        lq.text === sq.text && lq.category === sq.category
       );
       if (!exists) {
-        quotes.push(serverQuote);
-        isChanged = true;
+        quotes.push(sq);
+        newQuotesAdded = true;
       }
     });
 
-    if (isChanged) {
+    // Post local quotes not on server
+    for (const localQuote of quotes) {
+      const existsOnServer = serverQuotes.some(sq =>
+        sq.text === localQuote.text && sq.category === localQuote.category
+      );
+      if (!existsOnServer) {
+        try {
+          await postQuoteToServer(localQuote);
+        } catch {
+          // ignore errors here
+        }
+      }
+    }
+
+    if (newQuotesAdded) {
       saveQuotes();
       populateCategories();
       filterQuotes();
-      syncStatus.textContent = "Synced! Local quotes updated with server data.";
+      syncStatus.textContent = "Synced! Local data updated with server.";
     } else {
       syncStatus.textContent = "Already up to date with server.";
     }
-  } catch (err) {
+  } catch (error) {
     syncStatus.style.color = "red";
-    syncStatus.textContent = "Sync failed. Check your internet connection.";
+    syncStatus.textContent = "Sync failed. Check your connection.";
   }
 
   setTimeout(() => {
@@ -147,12 +158,12 @@ function importFromJsonFile(event) {
     try {
       const imported = JSON.parse(e.target.result);
       if (Array.isArray(imported)) {
-        imported.forEach(async (q) => {
+        imported.forEach(async q => {
           quotes.push(q);
           try {
             await postQuoteToServer(q);
           } catch {
-            // ignore post failure here
+            // Ignore errors here
           }
         });
         saveQuotes();
@@ -162,7 +173,7 @@ function importFromJsonFile(event) {
       } else {
         alert("Invalid JSON file.");
       }
-    } catch (err) {
+    } catch {
       alert("Error reading file.");
     }
   };
@@ -188,7 +199,6 @@ window.onload = async function () {
   } else {
     filterQuotes();
   }
-
   populateCategories();
   await syncQuotes();
 };
