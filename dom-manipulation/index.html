@@ -7,10 +7,15 @@
 </head>
 <body>
   <h1>Dynamic Quote Generator</h1>
-  <div id="quoteDisplay"></div>
+
+  <!-- Display area for random quotes -->
+  <div id="quoteDisplay" style="margin-bottom: 20px; font-size: 18px; font-style: italic;"></div>
+
+  <!-- Button to trigger random quote -->
   <button id="newQuote">Show New Quote</button>
 
-  <div>
+  <!-- Inputs to add new quote -->
+  <div style="margin-top: 20px;">
     <input id="newQuoteText" type="text" placeholder="Enter a new quote" />
     <input id="newQuoteCategory" type="text" placeholder="Enter quote category" />
     <button onclick="addQuote()">Add Quote</button>
