@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dynamic Quote Generator</title>
 </head>
 <body>
@@ -15,7 +15,7 @@
   </select>
 
   <!-- Quote Display -->
-  <div id="quoteDisplay" style="margin-top: 20px;"></div>
+  <div id="quoteDisplay" style="margin-top: 20px; min-height: 50px;"></div>
   <button id="newQuote">Show New Quote</button>
 
   <!-- Add New Quote -->
@@ -31,7 +31,7 @@
     <input type="file" id="importFile" accept=".json" />
   </div>
 
-  <!-- ✅ Sync with Server -->
+  <!-- Sync with Server -->
   <div style="margin-top: 20px;">
     <button id="syncBtn">Sync with Server</button>
     <div id="syncStatus" style="margin-top: 10px; color: green;"></div>
