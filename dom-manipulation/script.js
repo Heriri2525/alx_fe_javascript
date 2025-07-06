@@ -4,8 +4,8 @@ let quotes = JSON.parse(localStorage.getItem("quotes")) || [];
 
 const quoteDisplay = document.getElementById("quoteDisplay");
 const newQuoteBtn = document.getElementById("newQuote");
-const addQuoteBtn = document.getElementById("addQuoteBtn");
 const categoryFilter = document.getElementById("categoryFilter");
+const formContainer = document.getElementById("formContainer"); // container to put form in
 const syncStatus = document.getElementById("syncStatus");
 
 // Save quotes locally
@@ -45,6 +45,37 @@ function showRandomQuote() {
   const quote = filtered[randomIndex];
   quoteDisplay.innerText = `"${quote.text}" — ${quote.category}`;
   sessionStorage.setItem("lastQuote", JSON.stringify(quote));
+}
+
+// Dynamically create the Add Quote form and add it to the DOM
+function createAddQuoteForm() {
+  // Clear existing form (if any)
+  formContainer.innerHTML = "";
+
+  const formDiv = document.createElement("div");
+
+  const inputText = document.createElement("input");
+  inputText.type = "text";
+  inputText.id = "newQuoteText";
+  inputText.placeholder = "Enter a new quote";
+
+  const inputCategory = document.createElement("input");
+  inputCategory.type = "text";
+  inputCategory.id = "newQuoteCategory";
+  inputCategory.placeholder = "Enter quote category";
+
+  const addBtn = document.createElement("button");
+  addBtn.id = "addQuoteBtn";
+  addBtn.textContent = "Add Quote";
+
+  // Add event listener to the Add Quote button
+  addBtn.addEventListener("click", addQuote);
+
+  formDiv.appendChild(inputText);
+  formDiv.appendChild(inputCategory);
+  formDiv.appendChild(addBtn);
+
+  formContainer.appendChild(formDiv);
 }
 
 // Add a new quote and update DOM + server + storage
@@ -143,14 +174,14 @@ async function syncQuotes() {
 
 // Event listeners
 newQuoteBtn.addEventListener("click", showRandomQuote);
-addQuoteBtn.addEventListener("click", addQuote);
 categoryFilter.addEventListener("change", showRandomQuote);
 
 // Periodic sync every 30 seconds
 setInterval(syncQuotes, 30000);
 
-// On load
+// On page load
 window.onload = async function () {
+  createAddQuoteForm();
   const last = sessionStorage.getItem("lastQuote");
   if (last) {
     const quote = JSON.parse(last);
