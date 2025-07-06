@@ -8,7 +8,7 @@ const addQuoteBtn = document.getElementById("addQuoteBtn");
 const categoryFilter = document.getElementById("categoryFilter");
 const syncStatus = document.getElementById("syncStatus");
 
-// Save to localStorage
+// Save quotes locally
 function saveQuotes() {
   localStorage.setItem("quotes", JSON.stringify(quotes));
 }
@@ -53,7 +53,7 @@ async function fetchQuotesFromServer() {
   const response = await fetch(SERVER_URL);
   if (!response.ok) throw new Error("Failed to fetch from server");
   const data = await response.json();
-  // Map jsonplaceholder data to our quote format: use 'title' as text, 'userId' as category (string)
+  // Map jsonplaceholder data to our quote format: title => text, userId => category (string)
   return data.map(item => ({
     text: item.title,
     category: String(item.userId)
@@ -71,7 +71,7 @@ async function postQuoteToServer(quote) {
   return await response.json();
 }
 
-// Sync local quotes with server data and resolve conflicts
+// Sync local quotes with server and handle conflicts
 async function syncQuotes() {
   syncStatus.style.color = "green";
   syncStatus.textContent = "Syncing with server...";
@@ -99,7 +99,7 @@ async function syncQuotes() {
         try {
           await postQuoteToServer(localQuote);
         } catch {
-          // Ignore errors here
+          // ignore errors here
         }
       }
     }
@@ -108,7 +108,7 @@ async function syncQuotes() {
       saveQuotes();
       populateCategories();
       filterQuotes();
-      syncStatus.textContent = "Synced! Local data updated with server.";
+      syncStatus.textContent = "Quotes synced with server!";
     } else {
       syncStatus.textContent = "Already up to date with server.";
     }
@@ -123,6 +123,7 @@ async function syncQuotes() {
   }, 4000);
 }
 
+// Add a new quote
 function addQuote() {
   const textInput = document.getElementById("newQuoteText");
   const categoryInput = document.getElementById("newQuoteCategory");
@@ -154,7 +155,7 @@ categoryFilter.addEventListener("change", filterQuotes);
 // Periodic sync every 30 seconds
 setInterval(syncQuotes, 30000);
 
-// Initial setup on load
+// On page load
 window.onload = async function () {
   const last = sessionStorage.getItem("lastQuote");
   if (last) {
